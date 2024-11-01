@@ -159,9 +159,36 @@ object DOMtoHTML:
     attributes.find(_.name == name).map(_.value)
   }
 
-@main def replHTMLTest(): Unit = {
-  import scala.io.StdIn.readLine
-  import scala.annotation.tailrec
+Markdown conversion functions
+  def toMarkdown(html: HTML): String = {
+    val headMarkdown = html.head.title match {
+      case Title(text) => s"---\ntitle: $text\n---\n\n"
+    }
+    val bodyMarkdown = html.body.content.map(convertGrouping).mkString("\n\n")
+    headMarkdown + bodyMarkdown
+  }
+
+  def convertGrouping(element: GroupingContent): String = element match {
+    case H1(content) => s"# ${convertPhrasing(content)}\n"
+    case H2(content) => s"## ${convertPhrasing(content)}\n"
+    case H3(content) => s"### ${convertPhrasing(content)}\n"
+    case P(content) => s"${convertPhrasing(content)}\n"
+    case HR => "---"
+    case OL(items) => items.zipWithIndex.map { case (item, i) => s"${i + 1}. ${convertPhrasing(item.content)}" }.mkString("\n")
+    case UL(items) => items.map(item => s"- ${convertPhrasing(item.content)}").mkString("\n")
+  }
+
+  def convertPhrasing(content: Seq[PhrasingContent]): String = content.map {
+    case Em(text) => s"*$text*"
+    case Strong(text) => s"**$text**"
+    case A(href, text) => s"[${convertPhrasing(text)}]($href)"
+    case Txt(text) => text
+  }.mkString(" ")
+
+@main def replMarkdownTest(): Unit = {
+    import scala.io.StdIn.readLine
+    import scala.annotation.tailrec
+
 
   @tailrec
   def loop: Unit = {
